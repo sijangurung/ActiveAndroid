@@ -28,6 +28,7 @@ import java.util.Collections;
 import java.util.List;
 
 import android.content.Context;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 
@@ -147,6 +148,12 @@ public final class DatabaseHelper extends SQLiteOpenHelper {
 						final int version = Integer.valueOf(file.replace(".sql", ""));
 
 						if (version > oldVersion && version <= newVersion) {
+							// Major HACK for PG!!!
+							if (oldVersion == 1 && version == 3 && shouldSkipMigration3(db)) {
+								continue;
+							}
+							Log.d(String.format("Executing %s", file));
+							// END HACK
 							executeSqlScript(db, file);
 							migrationExecuted = true;
 
@@ -177,11 +184,26 @@ public final class DatabaseHelper extends SQLiteOpenHelper {
 			String line = null;
 
 			while ((line = reader.readLine()) != null) {
-				db.execSQL(line.replace(";", ""));
+				line = line.replace(";", "").trim();
+				if (!line.isEmpty()) {
+					db.execSQL(line);
+				}
 			}
 		}
 		catch (IOException e) {
 			Log.e("Failed to execute " + file, e);
 		}
+	}
+
+	/**
+	 * This method is part of a major HACK, in place only until all versions of
+	 * the DB are >= 4.
+	 */
+	private boolean shouldSkipMigration3(SQLiteDatabase db) {
+		Cursor cursor = db.rawQuery("SELECT name FROM sqlite_master WHERE type='table' AND name='db_version'", null);
+		boolean skip = cursor.getCount() != 0;
+		cursor.close();
+		Log.d(String.format("Should skip version 3? %b", skip));
+		return skip;
 	}
 }
