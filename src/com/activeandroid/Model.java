@@ -266,12 +266,15 @@ public abstract class Model {
 
 		if (mId != null) {
 			Cache.addEntity(this);
+			dataLoaded();
 		}
 	}
 
 	//////////////////////////////////////////////////////////////////////////////////////
 	// PROTECTED METHODS
 	//////////////////////////////////////////////////////////////////////////////////////
+
+	protected void dataLoaded() {}
 
 	protected final <T extends Model> List<T> getMany(Class<T> type, String foreignKey) {
 		return new Select().from(type).where(Cache.getTableName(type) + "." + foreignKey + "=?", getId()).execute();
